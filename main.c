@@ -2,44 +2,54 @@
 #include <stdlib.h>
 #include "DynamicArray.c"
 
-/*
-норма матрицы ||A|| - норма в линейном пространстве матриц
-норма матрицы - это неотрицательне вещественное число обладающее некторым количеством свойств:
-1. Если матрица ненулевая, то ее норма больше 0. Равна 0, если матрица нулевая
-2. Норма суммы матриц A и B >= сумме норм матриц A и B
-3. Если матрица умножается на число, то норма умножается на число
 
-Можно ввести абсолютно любую норму матриц, но существует несколько норм.
-1. Сумма всех коэффициентов матрицы по модулю
-2.1 M-норма - Суммируем все элементы по модулю ПОСТРОЧНО и называем нормой маскимальную вычисленную сумму
-2.1 L-норма - Суммируем все элементы по модулю ПОСТОЛБНО и называем нормой маскимальную вычисленную сумму
-3. K-норма - корень из суммы квадратов всех элементов матрицы
+bool compare(void* a, void* b) {
+    char* stra = (char *)a;
+    int len1 = strlen(stra);
 
+    char* strb = (char *)b;
+    int len2 = strlen(strb);
 
-Число обусловленности матрицы(мера обусловленности матрицы):
-cond(A) - это произведение норм матрицы и обратной матрицы (||A|| * ||A^-1||)
-
-Матрицы у которых cond(A) большое называют плохо обусловленными
-Матрицы у которых cond(A) маленькое называют хорошо обусловленными
-
-Число обусловленности матрицы при решении линейных уравненний связано с погрешностью результата
-
-ДЗ:
-Для матрицы Глильберта(3*3) посчитать обратную по методу Гаоса и посчитать для нее число обусловленности матрицы, используя K-норму
-*/
-
-
-float multipyByTwo(float a) {
-    return a * 2;
-}
-
-bool isOdd(float a) {
-    return a > 15;
+    return len1 > len2;
+    #define pushBack(X, Y) pushBackVoid(X, change_to_void(Y))
 }
 
 
-float sum(float a, float b) {
-    return a + b;
+void* addExclaimation(void* a) {
+    char* str = (char*)a;
+    int len = strlen(str);
+
+    char* newStr = (char*)malloc((10) * sizeof(char));
+    strcpy(newStr, str);
+
+    newStr[len] = '!';
+    newStr[len + 1] = '\0';
+
+    return newStr;
+}
+
+bool isBigLength(void* a) {
+    char* str = (char *)a;
+    int len = strlen(str);
+    return len > 5;
+}
+
+
+void* getMax(void* a, void* b) {
+    char* stra = (char *)a;
+    int len1 = strlen(stra);
+
+    char* strb = (char *)b;
+    int len2 = strlen(strb);
+
+    char* newStr = (char*)malloc((10) * sizeof(char));
+    #define pushBack(X, Y) pushBackVoid(X, change_to_void(Y))
+    if (len1 > len2) {
+        strcpy(newStr, stra);
+    } else {
+        strcpy(newStr, strb);
+    }
+    return newStr;
 }
 
 
@@ -52,14 +62,18 @@ int main() {
     char* d = "loli";
 
     setVoidElement(da, (void *)a, 0);
-    setVoidElement(da, (void *)b, 2);
+    setVoidElement(da, (void *)b, 10);
+
+    pushBackVoid(da, (void *)c);
+    popBack(da);
+    pushBackVoid(da, (void *)d);
 
     setVoidElement(da2, (void *)c, 0);
     setVoidElement(da2, (void *)d, 2);
 
-    char* sda = toString(da2);
+    char* sda = toString(da);
 
-    char* elem = (char *)getElementVoid(da, 1);
+    char* elem = (char *)getElementVoid(da, 2);
     puts(sda);
     puts(elem);
 
@@ -67,9 +81,21 @@ int main() {
     char* scda = toString(cda);
     puts(scda);
 
-    DynamicArray_t* socda = mergeSort(cda);
+    DynamicArray_t* socda = mergeSort(cda, compare);
     char* ssocda = toString(socda);
     puts(ssocda);
+
+    DynamicArray_t* mapda = mapDynamicArray(da, addExclaimation);
+    char* smapda = toString(mapda);
+    puts(smapda);
+
+    DynamicArray_t* wheda = whereDynamicArray(da, isBigLength);
+    char* swheda = toString(wheda);
+    puts(swheda);
+
+    char* sredda = reduceDynamicArray(da, getMax);
+    puts(sredda);
+
 
     /*DynamicArray_t* da = newDynamicArray(get_float_DynamicArray_vtable(), 4);
     DynamicArray_t* da2 = newDynamicArray(get_float_DynamicArray_vtable(), 4);

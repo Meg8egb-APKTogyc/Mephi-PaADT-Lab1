@@ -75,25 +75,6 @@ void DynamicArray_data_alloc_string(DynamicArray_data_t* da_data, int size, int 
 }
 
 
-type_t getType(DynamicArray_t* da) {
-    return da -> funcs -> getType();
-}
-
-
-type_t getTypeInt() {
-    return INT;
-}
-
-
-type_t getTypeFloat() {
-    return FLOAT;
-}
-
-type_t getTypeString() {
-    return STRING;
-}
-
-
 void freeDynamicArray(DynamicArray_t* da) {
     if (da == NULL) {
         return;
@@ -117,8 +98,6 @@ DynamicArray_vtable_t* get_int_DynamicArray_vtable() {
         int_vtable = (DynamicArray_vtable_t*) malloc(sizeof(DynamicArray_vtable_t));
         int_vtable -> dataAlloc = &DynamicArray_data_alloc_int;
         int_vtable -> toString = &toStringInt;
-        int_vtable -> compare = &compareInt;
-        int_vtable -> getType = &getTypeInt;
     }
 
     return int_vtable;
@@ -129,8 +108,6 @@ DynamicArray_vtable_t* get_float_DynamicArray_vtable() {
         float_vtable = (DynamicArray_vtable_t*) malloc(sizeof(DynamicArray_vtable_t));
         float_vtable -> dataAlloc = &DynamicArray_data_alloc_float;
         float_vtable -> toString = &toStringFloat;
-        float_vtable -> compare = &compareFloat;
-        float_vtable -> getType = &getTypeFloat;
     }
 
     return float_vtable;
@@ -142,8 +119,6 @@ DynamicArray_vtable_t* get_string_DynamicArray_vtable() {
         string_vtable = (DynamicArray_vtable_t*) malloc(sizeof(DynamicArray_vtable_t));
         string_vtable -> dataAlloc = &DynamicArray_data_alloc_string;
         string_vtable -> toString = &toStringString;
-        string_vtable -> compare = &compareString;
-        string_vtable -> getType = &getTypeString;
     }
 
     return string_vtable;
@@ -240,6 +215,11 @@ void resize(DynamicArray_t* da, int size) {
 
 
 void* getElementVoid(DynamicArray_t* da, int idx) {
+    if (idx >= da -> data -> count) {
+        fprintf(stderr, "Error: list index out of range");
+        exit(1);
+    }
+
     void* element = malloc(da -> data -> elementSize);
 
     memcpy(element, (char *)da -> data -> array + idx * da -> data -> elementSize, da -> data -> elementSize);
@@ -249,6 +229,11 @@ void* getElementVoid(DynamicArray_t* da, int idx) {
 
 
 void setVoidElement(DynamicArray_t* da, void* val, int idx) {
+    if (idx >= da -> data -> count) {
+        fprintf(stderr, "Error: list index out of range");
+        exit(1);
+    }
+
     char* byte = (char *)da -> data -> array;
     
     void* element_ptr = byte + idx * da -> data -> elementSize;
@@ -267,40 +252,14 @@ void pushBackVoid(DynamicArray_t* da, void* val) {
 }
 
 
+void popBack(DynamicArray_t* da) {
+    da -> data -> count--;
+    return;
+}
+
+
 int getLenght(DynamicArray_t* da) {
     return da -> data -> count;
-}
-
-
-bool compare(DynamicArray_t* da1, int idx1, DynamicArray_t* da2, int idx2) {
-    return da1 -> funcs -> compare(da1, idx1, da2, idx2);
-}
-
-
-bool compareInt(DynamicArray_t* da1, int idx1, DynamicArray_t* da2, int idx2) {
-    int a = *(int *)getElementVoid(da1, idx1);
-    int b = *(int *)getElementVoid(da2, idx2);
-    return (a < b);
-}
-
-
-bool compareFloat(DynamicArray_t* da1, int idx1, DynamicArray_t* da2, int idx2) {
-    int a = *(float *)getElementVoid(da1, idx1);
-    int b = *(float *)getElementVoid(da2, idx2);
-    return (a < b);
-}
-
-bool compareString(DynamicArray_t* da1, int idx1, DynamicArray_t* da2, int idx2) {
-    char* str1 = (char *)getElementVoid(da1, idx1);
-    char* str2 = (char *)getElementVoid(da2, idx2);
-
-    int str1SZ = strlen(str1);
-    int str2SZ = strlen(str2);
-
-    free(str1);
-    free(str2);
-
-    return str1SZ < str2SZ;
 }
 
 
@@ -311,26 +270,18 @@ DynamicArray_t* concatenateDynamicArrays(DynamicArray_t* da1, DynamicArray_t* da
     int szda2 = da2 -> data -> count * da2 -> data -> elementSize;
     memcpy(new_da -> data -> array, da1 -> data -> array, szda1);
     memcpy((char *)new_da -> data -> array + szda1, da2 -> data -> array, szda2);
-
-    /*for (int i = 0; i < da1 -> data -> count; ++i) {
-        setVoidElement(new_da, getElementVoid(da1, i), i);
-    }
-
-    for (int i = 0; i < da2 -> data -> count; ++i) {
-        setVoidElement(new_da, getElementVoid(da2, i), da1 -> data -> count + i);
-    }*/
     
     return new_da;
 }
 
-DynamicArray_t* merge(DynamicArray_t* da1, DynamicArray_t* da2) {
+DynamicArray_t* merge(DynamicArray_t* da1, DynamicArray_t* da2, VoidFunctionSort func) {
     DynamicArray_t* ret = new_DynamicArray(da1 -> funcs, da1 -> data -> count + da2 -> data -> count, da1 -> data -> elementSize);
 
     int da1_count = da1 -> data -> count;
     int da2_count = da2 -> data -> count;
     int i = 0, j = 0;
     while (i < da1_count || j < da2_count) {
-        if (j == da2_count || (i != da1_count && compare(da1, i, da2, j))) {
+        if (j == da2_count || (i != da1_count && func(getElementVoid(da1, i), getElementVoid(da2, j)))) {
             setVoidElement(ret, getElementVoid(da1, i), i + j);
             ++i;
         } else {
@@ -346,7 +297,7 @@ DynamicArray_t* merge(DynamicArray_t* da1, DynamicArray_t* da2) {
 }
 
 
-DynamicArray_t* mergeSort(DynamicArray_t* da) {
+DynamicArray_t* mergeSort(DynamicArray_t* da, VoidFunctionSort func) {
     if (da -> data -> count == 1) {
         return da;
     }
@@ -361,94 +312,42 @@ DynamicArray_t* mergeSort(DynamicArray_t* da) {
     memcpy(dal -> data -> array, da -> data -> array, szdal);
     memcpy(dar -> data -> array, (void *)((char *)da -> data -> array + szdal), szdar);
 
-    /*for (int i = 0; i < mid; ++i) {
-        setVoidElement(dal, getElementVoid(da, i), i);
-    }
+    dal = mergeSort(dal, func);
+    dar = mergeSort(dar, func);
 
-    for (int i = 0; i < da -> data -> count - mid; ++i) {
-        setVoidElement(dar, getElementVoid(da, mid + i), i);
-    }*/
-
-    dal = mergeSort(dal);
-    dar = mergeSort(dar);
-
-    return merge(dal, dar);
+    return merge(dal, dar, func);
 }
 
-DynamicArray_t* mapDynamicArray(DynamicArray_t* da, MapFunctionUnion_t* func) {
+DynamicArray_t* mapDynamicArray(DynamicArray_t* da, VoidFunctionMap func) {
     DynamicArray_t* new_da = new_DynamicArray(da -> funcs, da -> data -> count, da -> data -> elementSize);
 
-    switch (da -> funcs -> getType())
-    {
-    case INT:
-        for (int i = 0; i < da -> data -> count; ++i) {
-            int nelement = func -> MapFunctionInt(change_void_to_int(getElementVoid(da, i)));
-            setVoidElement(new_da, change_to_void(nelement), i);
-        }
-        break;
-    case FLOAT:
-        for (int i = 0; i < da -> data -> count; ++i) {
-            float nelement = func -> MapFunctionFloat(change_void_to_float(getElementVoid(da, i)));
-            setVoidElement(new_da, change_to_void(nelement), i);
-        }
-        break;
-    case STRING:
-        
-    default:
-        break;
+    for (int i = 0; i < da -> data -> count; ++i) {
+        setVoidElement(new_da, func(getElementVoid(da, i)), i);
     }
 
     return new_da;
 }
 
 
-DynamicArray_t* whereDynamicArray(DynamicArray_t* da, WhereFunctionUnion_t* func) {
+DynamicArray_t* whereDynamicArray(DynamicArray_t* da, VoidFunctionWhere func) {
     DynamicArray_t* new_da = new_DynamicArray(da -> funcs, 0, da -> data -> elementSize);
 
-    switch (da -> funcs -> getType())
-    {
-    case INT:
-        for (int i = 0; i < da -> data -> count; ++i) {
-            if (func -> WhereFunctionInt(change_void_to_int(getElementVoid(da, i)))) {
-                pushBackVoid(new_da, getElementVoid(da, i));
-            }
+    for (int i = 0; i < da -> data -> count; ++i) {
+        if (func(getElementVoid(da, i))) {
+            pushBackVoid(new_da, getElementVoid(da, i));
         }
-        break;
-    case FLOAT:
-        for (int i = 0; i < da -> data -> count; ++i) {
-            if (func -> WhereFunctionFloat(change_void_to_float(getElementVoid(da, i)))) {
-                pushBackVoid(new_da, getElementVoid(da, i));
-            }
-        }
-        break;
-    default:
-        break;
     }
 
     return new_da;
 }
 
 
-void* reduceDynamicArray(DynamicArray_t* da, ReduceFunctionUnion_t* func) {
+void* reduceDynamicArray(DynamicArray_t* da, VoidFunctionReduce func) {
     void* ret = malloc(da -> data -> elementSize);
     memcpy(ret, getElementVoid(da, 0), da -> data -> elementSize);
 
-    switch (da -> funcs -> getType())
-    {
-    case INT:
-        for (int i = 1; i < da -> data -> count; ++i) {
-            int* midRet = (int *)ret;
-            *midRet = func -> ReduceFunctionInt(change_void_to_int(getElementVoid(da, i)), *midRet);
-        }
-        break;
-    case FLOAT:
-        for (int i = 1; i < da -> data -> count; ++i) {
-            float* midRet = (float *)ret;
-            *midRet = func -> ReduceFunctionFloat(change_void_to_float(getElementVoid(da, i)), *midRet);
-        }
-        break;
-    default:
-        break;
+    for (int i = 1; i < da -> data -> count; ++i) {
+        ret = func(getElementVoid(da, i), ret);
     }
 
     return ret;
