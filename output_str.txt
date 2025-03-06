@@ -1,0 +1,31 @@
+1. [ "", "WOrld" ]
+
+2. [ "Hi", "WOrld" ]
+
+3. [ "Hi", "WOrld", "", "" ]
+
+WOrld
+4. [ "Hi", "WOrld", "", "" ]
+
+[ "WOrld", "Hi", "", "" ]
+5. [ "Hi", "WOrld", "", "" ]
+
+[ "Hi!", "WOrld!", "!", "!" ]
+6. [ "Hi", "WOrld", "", "" ]
+
+7. [ "Hi", "WOrld", "", "Nice" ]
+
+[ "WOrld", "Nice" ]
+8. [ "Hi", "WOrld", "", "Nice" ]
+
+WOrld
+9. [ "Hi", "WOrld", "", "Nice" ]
+
+[ "WOrld", "Nice", "Hi", "" ]
+10. [ "Hi", "WOrld", "", "Nice" ]
+
+
+1. [ "Hi", "" ]
+
+
+[ "Hi", "WOrld", "", "Nice", "Hi", "" ]

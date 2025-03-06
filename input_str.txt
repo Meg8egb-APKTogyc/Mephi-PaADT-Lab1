@@ -1,0 +1,21 @@
+2 2
+10 10
+10
+set
+1 WOrld
+set
+0 Hi
+res
+4
+get
+1
+sort
+map
+set
+3 Nice
+where
+reduce
+sort
+1
+set
+0 Hi

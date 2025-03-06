@@ -63,6 +63,7 @@ char* toStringString(DynamicArray_t* da);
 
 DynamicArray_vtable_t* get_int_DynamicArray_vtable();
 DynamicArray_vtable_t* get_float_DynamicArray_vtable();
+DynamicArray_vtable_t* get_string_DynamicArray_vtable();
 
 
 void* getElementVoid(DynamicArray_t* da, int idx);
@@ -76,7 +77,7 @@ void popBack(DynamicArray_t* da);
 int getLenght(DynamicArray_t* da);
 
 
-DynamicArray_t* concatenationDynamicArrays(DynamicArray_t* da1, DynamicArray_t* da2);
+DynamicArray_t* concatenateDynamicArrays(DynamicArray_t* da1, DynamicArray_t* da2);
 
 DynamicArray_t* merge(DynamicArray_t* da1, DynamicArray_t* da2, VoidFunctionSort func);
 

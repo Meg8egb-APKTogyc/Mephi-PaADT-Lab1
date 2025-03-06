@@ -198,6 +198,7 @@ char* toStringString(DynamicArray_t* da) {
 
 void resize(DynamicArray_t* da, int size) {
     if (size == da -> data -> capacity) {
+        da -> data -> count = size;
         return;
     }
 
@@ -208,7 +209,7 @@ void resize(DynamicArray_t* da, int size) {
 
     free(da -> data -> array);
 
-    da -> data -> count = elementsToCopy;
+    da -> data -> count = size;
     da -> data -> capacity = getCapacity(size);
     da -> data -> array = new_array;
 }
@@ -244,11 +245,13 @@ void setVoidElement(DynamicArray_t* da, void* val, int idx) {
 
 void pushBackVoid(DynamicArray_t* da, void* val) {
     if (da -> data -> count == da -> data -> capacity) {
-        resize(da, da -> data -> capacity * 2);
+        resize(da, da -> data -> count + 1);
+        setVoidElement(da, val, da -> data -> count - 1);
+        return;
     }
 
-    setVoidElement(da, val, da -> data -> count);
     da -> data -> count++;
+    setVoidElement(da, val, da -> data -> count - 1);
 }
 
 
@@ -306,7 +309,7 @@ DynamicArray_t* mergeSort(DynamicArray_t* da, VoidFunctionSort func) {
     DynamicArray_t* dal = new_DynamicArray(da -> funcs, mid, da -> data -> elementSize);
     DynamicArray_t* dar = new_DynamicArray(da -> funcs, da -> data -> count - mid, da -> data -> elementSize);
 
-    int szdal = mid * da -> data -> elementSize;
+    int szdal = dal -> data -> count * da -> data -> elementSize;
     int szdar = dar -> data -> count * da -> data -> elementSize;
     
     memcpy(dal -> data -> array, da -> data -> array, szdal);

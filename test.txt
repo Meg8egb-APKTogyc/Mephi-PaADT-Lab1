@@ -1,60 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "DynamicArray.c"
-
-
-bool compare(void* a, void* b) {
-    char* stra = (char *)a;
-    int len1 = strlen(stra);
-
-    char* strb = (char *)b;
-    int len2 = strlen(strb);
-
-    return len1 > len2;
-    #define pushBack(X, Y) pushBackVoid(X, change_to_void(Y))
-}
-
-
-void* addExclaimation(void* a) {
-    char* str = (char*)a;
-    int len = strlen(str);
-
-    char* newStr = (char*)malloc((10) * sizeof(char));
-    strcpy(newStr, str);
-
-    newStr[len] = '!';
-    newStr[len + 1] = '\0';
-
-    return newStr;
-}
-
-bool isBigLength(void* a) {
-    char* str = (char *)a;
-    int len = strlen(str);
-    return len > 5;
-}
-
-
-void* getMax(void* a, void* b) {
-    char* stra = (char *)a;
-    int len1 = strlen(stra);
-
-    char* strb = (char *)b;
-    int len2 = strlen(strb);
-
-    char* newStr = (char*)malloc((10) * sizeof(char));
-    #define pushBack(X, Y) pushBackVoid(X, change_to_void(Y))
-    if (len1 > len2) {
-        strcpy(newStr, stra);
-    } else {
-        strcpy(newStr, strb);
-    }
-    return newStr;
-}
-
-
-int main() {
-    DynamicArray_t* da = new_DynamicArray(get_string_DynamicArray_vtable(), 4, 10);
+DynamicArray_t* da = new_DynamicArray(get_string_DynamicArray_vtable(), 4, 10);
     DynamicArray_t* da2 = new_DynamicArray(get_string_DynamicArray_vtable(), 3, 10);
     char* a = "bebra";
     char* b = "pensil";
@@ -62,7 +6,7 @@ int main() {
     char* d = "loli";
 
     setVoidElement(da, (void *)a, 0);
-    setVoidElement(da, (void *)b, 10);
+    setVoidElement(da, (void *)b, 2);
 
     pushBackVoid(da, (void *)c);
     popBack(da);
@@ -161,6 +105,3 @@ int main() {
     printf("%f \n", *c);
 
     printf("%i \n", getLenght(da));*/
-
-    return EXIT_SUCCESS;
-}
