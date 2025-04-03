@@ -9,7 +9,8 @@ program_file=$1
 input_file=$2
 output_file=$3
 
-gcc -o program "$program_file" DynamicArray.c
+gcc -o program "$program_file" DynamicArray.c input.c VTables.c ErrorHandler.c
+
 
 if [ $? -eq 0 ]; then
     echo "Компиляция прошла успешно."

@@ -1,23 +1,7 @@
 #include "DynamicArray.h"
 
 
-static DynamicArray_vtable_t* int_vtable = NULL;
-static DynamicArray_vtable_t* float_vtable = NULL;
-static DynamicArray_vtable_t* string_vtable = NULL;
-
-
-DynamicArray_t* new_DynamicArray(DynamicArray_vtable_t* funcs, int size, int elemSize) {
-    DynamicArray_t* da = (DynamicArray_t*) malloc(sizeof(DynamicArray_t));
-    da -> data = (DynamicArray_data_t*) malloc(sizeof(DynamicArray_data_t));
-
-    da -> funcs = funcs;
-    da -> funcs -> dataAlloc(da -> data, size, elemSize);
-
-    return da;
-}
-
-
-int getCapacity(int size) {
+int _getCapacity(int size) {
     int bit = 1;
     while (bit <= size)
         bit = (bit << 1);
@@ -26,59 +10,74 @@ int getCapacity(int size) {
 }
 
 
-void DynamicArray_data_alloc(DynamicArray_t* da, int size, int elementSize) {
-    if (da == NULL) exit(1);
+DynamicArray_t* new_DynamicArrayEr(Types_vtable_t* funcs, int size, int elemSize, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
 
-    da -> funcs -> dataAlloc(da -> data, size, elementSize);
+    RETURN_IF_ERROR(!funcs || size < 0 || elemSize <= 0, EH_ERROR_INVALID_INPUT, NULL);
+    DynamicArray_t* da = (DynamicArray_t*) malloc(sizeof(DynamicArray_t));
+    RETURN_IF_ERROR(!da, EH_ERROR_MEMORY_ALLOCATION, NULL);
+    da -> data = (DynamicArray_data_t*) malloc(sizeof(DynamicArray_data_t));
+    if (!da->data) {
+        free(da);
+        RETURN_IF_ERROR(1, EH_ERROR_MEMORY_ALLOCATION, NULL);
+    }
+
+    da -> funcs = (Types_vtable_t*) malloc(sizeof(Types_vtable_t));
+    if (!da -> funcs) {
+        free(da);
+        free(da->data);
+        RETURN_IF_ERROR(1, EH_ERROR_MEMORY_ALLOCATION, NULL);
+    }
+    da -> funcs = funcs;
+    da -> data -> count = size;
+    da -> data -> capacity = _getCapacity(size);
+    da -> data -> elementSize = elemSize;
+    da -> data -> array = dataAlloc(da -> funcs, da -> data -> count, da -> data -> capacity, da -> data -> elementSize);
+
+    return da;
 }
 
-void DynamicArray_data_alloc_int(DynamicArray_data_t* da_data, int size, int elemSize) {
-    da_data -> count = size;
-    da_data -> capacity = getCapacity(size);
-    da_data -> elementSize = sizeof(int);
 
-    int* new_array = malloc(da_data -> capacity * da_data -> elementSize);
+char* DAtoStringEr(DynamicArray_t* da, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
+    int buffSz = 3;
+
+    for (int i = 0; i < da -> data -> count; ++i) {
+        char* str = toString(da -> funcs, getElementVoidEr(da, i, error), da -> data -> elementSize);
+
+        buffSz += strlen(str) + 4;
+    }
     
-    for (int i = 0; i < da_data -> count; ++i) {
-        new_array[i] = 0;
+    char* buff = (char*)malloc(buffSz);
+
+    if (da -> data -> count == 0) {
+        sprintf(buff, "[]");
+        return buff;
     }
 
-    da_data -> array = new_array;
-}
+    char* curBuff = buff;
+    curBuff += sprintf(curBuff, "[ ");
+    for (int i = 0, n = da -> data -> count; i < n; ++i) {
+        char* str = toString(da -> funcs, getElementVoidEr(da, i, error), da -> data -> elementSize);
+        curBuff += sprintf(curBuff, "\"%s\"", str);
 
-void DynamicArray_data_alloc_float(DynamicArray_data_t* da_data, int size, int elemSize) {
-    da_data -> count = size;
-    da_data -> capacity = getCapacity(size);
-    da_data -> elementSize = sizeof(float);
-
-    float* new_array = malloc(da_data -> capacity * da_data -> elementSize);
-    
-    for (int i = 0; i < da_data -> count; ++i) {
-        new_array[i] = 0;
+        if (i + 1 == n)
+            curBuff += sprintf(curBuff, " ]");
+        else
+            curBuff += sprintf(curBuff, ", ");
     }
 
-    da_data -> array = new_array;
-}
+    if (error) *error = EH_OK;
 
-
-void DynamicArray_data_alloc_string(DynamicArray_data_t* da_data, int size, int elementSize) {
-    da_data->count = size;
-    da_data->capacity = getCapacity(size);
-    da_data->elementSize = elementSize;
-
-    da_data->array = malloc(da_data->capacity * da_data->elementSize);
-
-    for (int i = 0; i < da_data->count; ++i) {
-        char* str = (char*)da_data->array + i * da_data->elementSize;
-        str[0] = '\0';
-    }
+    return buff;
 }
 
 
-void freeDynamicArray(DynamicArray_t* da) {
-    if (da == NULL) {
-        return;
-    }
+ErrorCode* freeDynamicArrayEr(DynamicArray_t* da, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
 
     if (da->data != NULL) {
         if (da->data->array != NULL) {
@@ -93,116 +92,17 @@ void freeDynamicArray(DynamicArray_t* da) {
 }
 
 
-DynamicArray_vtable_t* get_int_DynamicArray_vtable() {
-    if (int_vtable == NULL) {
-        int_vtable = (DynamicArray_vtable_t*) malloc(sizeof(DynamicArray_vtable_t));
-        int_vtable -> dataAlloc = &DynamicArray_data_alloc_int;
-        int_vtable -> toString = &toStringInt;
-    }
+ErrorCode* resizeEr(DynamicArray_t* da, int size, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
 
-    return int_vtable;
-}
-
-DynamicArray_vtable_t* get_float_DynamicArray_vtable() {
-    if (float_vtable == NULL) {
-        float_vtable = (DynamicArray_vtable_t*) malloc(sizeof(DynamicArray_vtable_t));
-        float_vtable -> dataAlloc = &DynamicArray_data_alloc_float;
-        float_vtable -> toString = &toStringFloat;
-    }
-
-    return float_vtable;
-}
-
-
-DynamicArray_vtable_t* get_string_DynamicArray_vtable() {
-    if (string_vtable == NULL) {
-        string_vtable = (DynamicArray_vtable_t*) malloc(sizeof(DynamicArray_vtable_t));
-        string_vtable -> dataAlloc = &DynamicArray_data_alloc_string;
-        string_vtable -> toString = &toStringString;
-    }
-
-    return string_vtable;
-}
-
-
-
-char* toString(DynamicArray_t* da) {
-    return da -> funcs -> toString(da);
-}
-
-
-char* toStringInt(DynamicArray_t* da) {
-    char* buff = (char*) malloc(da -> data -> count * (12 + 2) + 5);
-    if (da -> data -> count == 0) {
-        sprintf(buff, "[]");
-        return buff;
-    }
-
-    char* current = buff;
-    current += sprintf(current, "[ ");
-    for (int i = 0; i < da -> data -> count - 1; ++i) {
-        current += sprintf(current, "%i, ", *(int*)getElementVoid(da, i));
-    }
-    sprintf(current, "%i ]", *(int*)getElementVoid(da, da -> data -> count - 1));
-
-    return buff;
-}
-
-
-char* toStringFloat(DynamicArray_t* da) {
-    char* buff = (char*) malloc(da -> data -> count * (15 + 2) + 5);
-    if (da -> data -> count == 0) {
-        sprintf(buff, "[]");
-        return buff;
-    }
-
-    char* current = buff;
-    current += sprintf(current, "[ ");
-    for (int i = 0; i < da -> data -> count - 1; ++i) {
-        current += sprintf(current, "%f, ", *(float*)getElementVoid(da, i));
-    }
-    sprintf(current, "%f ]", *(float*)getElementVoid(da, da -> data -> count - 1));
-
-    return buff;
-}
-
-
-char* toStringString(DynamicArray_t* da) {
-    int buffSz = 3;
-
-    for (int i = 0; i < da -> data -> count; ++i) {
-        char* str = getElementVoid(da, i);
-        buffSz += strlen(str) + 4;
-    }
-    
-    char* buff = (char*)malloc(buffSz);
-
-    if (da -> data -> count == 0) {
-        sprintf(buff, "[]");
-        return buff;
-    }
-
-    char* curBuff = buff;
-    curBuff += sprintf(curBuff, "[ ");
-    for (int i = 0; i < da -> data -> count - 1; ++i) {
-        char* str = getElementVoid(da, i);
-        curBuff += sprintf(curBuff, "\"%s\", ", str);
-    }
-
-    char* str = (char*)getElementVoid(da, da->data->count - 1);
-    sprintf(curBuff, "\"%s\" ]", str);
-
-    return buff;
-}
-
-
-void resize(DynamicArray_t* da, int size) {
     if (size == da -> data -> capacity) {
         da -> data -> count = size;
-        return;
+        return NULL;
     }
 
-    void* new_array = malloc(getCapacity(size) * da -> data -> elementSize);
+    void* new_array = malloc(_getCapacity(size) * da -> data -> elementSize);
+    RETURN_IF_ERROR(!new_array, EH_ERROR_MEMORY_ALLOCATION, NULL);
 
     int elementsToCopy = (da -> data -> count < size) ? da -> data -> count : size;
     memcpy(new_array, da -> data -> array, elementsToCopy * da -> data -> elementSize);
@@ -210,16 +110,15 @@ void resize(DynamicArray_t* da, int size) {
     free(da -> data -> array);
 
     da -> data -> count = size;
-    da -> data -> capacity = getCapacity(size);
+    da -> data -> capacity = _getCapacity(size);
     da -> data -> array = new_array;
 }
 
 
-void* getElementVoid(DynamicArray_t* da, int idx) {
-    if (idx >= da -> data -> count) {
-        fprintf(stderr, "Error: list index out of range");
-        exit(1);
-    }
+void* getElementVoidEr(DynamicArray_t* da, int idx, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+    RETURN_IF_ERROR(idx < 0 || idx >= da -> data -> count, EH_ERROR_INDEX_OUT_OF_RANGE, NULL);
 
     void* element = malloc(da -> data -> elementSize);
 
@@ -229,11 +128,10 @@ void* getElementVoid(DynamicArray_t* da, int idx) {
 }
 
 
-void setVoidElement(DynamicArray_t* da, void* val, int idx) {
-    if (idx >= da -> data -> count) {
-        fprintf(stderr, "Error: list index out of range");
-        exit(1);
-    }
+ErrorCode* setVoidElementEr(DynamicArray_t* da, void* val, int idx, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+    RETURN_IF_ERROR(idx < 0 || idx >= da -> data -> count, EH_ERROR_INDEX_OUT_OF_RANGE, NULL);
 
     char* byte = (char *)da -> data -> array;
     
@@ -243,31 +141,44 @@ void setVoidElement(DynamicArray_t* da, void* val, int idx) {
 }
 
 
-void pushBackVoid(DynamicArray_t* da, void* val) {
+ErrorCode* pushBackVoidEr(DynamicArray_t* da, void* val, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
     if (da -> data -> count == da -> data -> capacity) {
-        resize(da, da -> data -> count + 1);
-        setVoidElement(da, val, da -> data -> count - 1);
-        return;
+        resizeEr(da, da -> data -> count + 1, error);
+        setVoidElementEr(da, val, da -> data -> count - 1, error);
+        return NULL;
     }
 
     da -> data -> count++;
-    setVoidElement(da, val, da -> data -> count - 1);
+    setVoidElementEr(da, val, da -> data -> count - 1, error);
 }
 
 
-void popBack(DynamicArray_t* da) {
+ErrorCode* popBackEr(DynamicArray_t* da, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
     da -> data -> count--;
-    return;
+    return NULL;
 }
 
 
-int getLenght(DynamicArray_t* da) {
+int getLenghtEr(DynamicArray_t* da, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR_TYPE(!da, EH_ERROR_NULL_POINTER, int, 0);
+
     return da -> data -> count;
 }
 
 
-DynamicArray_t* concatenateDynamicArrays(DynamicArray_t* da1, DynamicArray_t* da2) {
-    DynamicArray_t* new_da = new_DynamicArray(da1 -> funcs, da1 -> data -> count + da2 -> data -> count, da1 -> data -> elementSize);
+DynamicArray_t* concatenateDynamicArraysEr(DynamicArray_t* da1, DynamicArray_t* da2, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da1, EH_ERROR_NULL_POINTER, NULL);
+    RETURN_IF_ERROR(!da2, EH_ERROR_NULL_POINTER, NULL);
+
+    DynamicArray_t* new_da = new_DynamicArrayEr(da1 -> funcs, da1 -> data -> count + da2 -> data -> count, da1 -> data -> elementSize, error);
     
     int szda1 = da1 -> data -> count * da1 -> data -> elementSize;
     int szda2 = da2 -> data -> count * da2 -> data -> elementSize;
@@ -277,37 +188,47 @@ DynamicArray_t* concatenateDynamicArrays(DynamicArray_t* da1, DynamicArray_t* da
     return new_da;
 }
 
-DynamicArray_t* merge(DynamicArray_t* da1, DynamicArray_t* da2, VoidFunctionSort func) {
-    DynamicArray_t* ret = new_DynamicArray(da1 -> funcs, da1 -> data -> count + da2 -> data -> count, da1 -> data -> elementSize);
+DynamicArray_t* mergeEr(DynamicArray_t* da1, DynamicArray_t* da2, VoidFunctionSort func, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da1, EH_ERROR_NULL_POINTER, NULL);
+    RETURN_IF_ERROR(!da2, EH_ERROR_NULL_POINTER, NULL);
+
+    DynamicArray_t* ret = new_DynamicArrayEr(da1 -> funcs, da1 -> data -> count + da2 -> data -> count, da1 -> data -> elementSize, error);
+
+    if (func == NULL)
+        func = da1 -> funcs -> compare;
 
     int da1_count = da1 -> data -> count;
     int da2_count = da2 -> data -> count;
     int i = 0, j = 0;
     while (i < da1_count || j < da2_count) {
-        if (j == da2_count || (i != da1_count && func(getElementVoid(da1, i), getElementVoid(da2, j)))) {
-            setVoidElement(ret, getElementVoid(da1, i), i + j);
+        if (j == da2_count || (i != da1_count && func(getElementVoidEr(da1, i, error), getElementVoidEr(da2, j, error)))) {
+            setVoidElementEr(ret, getElementVoidEr(da1, i, error), i + j, error);
             ++i;
         } else {
-            setVoidElement(ret, getElementVoid(da2, j), i + j);
+            setVoidElementEr(ret, getElementVoidEr(da2, j, error), i + j, error);
             ++j;
         }
     }
 
-    freeDynamicArray(da1);
-    freeDynamicArray(da2);
+    freeDynamicArrayEr(da1, error);
+    freeDynamicArrayEr(da2, error);
 
     return ret;
 }
 
 
-DynamicArray_t* mergeSort(DynamicArray_t* da, VoidFunctionSort func) {
+DynamicArray_t* mergeSortEr(DynamicArray_t* da, VoidFunctionSort func, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
     if (da -> data -> count == 1) {
         return da;
     }
 
     int mid = da -> data -> count / 2;
-    DynamicArray_t* dal = new_DynamicArray(da -> funcs, mid, da -> data -> elementSize);
-    DynamicArray_t* dar = new_DynamicArray(da -> funcs, da -> data -> count - mid, da -> data -> elementSize);
+    DynamicArray_t* dal = new_DynamicArrayEr(da -> funcs, mid, da -> data -> elementSize, error);
+    DynamicArray_t* dar = new_DynamicArrayEr(da -> funcs, da -> data -> count - mid, da -> data -> elementSize, error);
 
     int szdal = dal -> data -> count * da -> data -> elementSize;
     int szdar = dar -> data -> count * da -> data -> elementSize;
@@ -315,29 +236,35 @@ DynamicArray_t* mergeSort(DynamicArray_t* da, VoidFunctionSort func) {
     memcpy(dal -> data -> array, da -> data -> array, szdal);
     memcpy(dar -> data -> array, (void *)((char *)da -> data -> array + szdal), szdar);
 
-    dal = mergeSort(dal, func);
-    dar = mergeSort(dar, func);
+    dal = mergeSortEr(dal, func, error);
+    dar = mergeSortEr(dar, func, error);
 
-    return merge(dal, dar, func);
+    return mergeEr(dal, dar, func, error);
 }
 
-DynamicArray_t* mapDynamicArray(DynamicArray_t* da, VoidFunctionMap func) {
-    DynamicArray_t* new_da = new_DynamicArray(da -> funcs, da -> data -> count, da -> data -> elementSize);
+DynamicArray_t* mapDynamicArrayEr(DynamicArray_t* da, VoidFunctionMap func, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
+    DynamicArray_t* new_da = new_DynamicArrayEr(da -> funcs, da -> data -> count, da -> data -> elementSize, error);
 
     for (int i = 0; i < da -> data -> count; ++i) {
-        setVoidElement(new_da, func(getElementVoid(da, i)), i);
+        setVoidElementEr(new_da, func(getElementVoidEr(da, i, error)), i, error);
     }
 
     return new_da;
 }
 
 
-DynamicArray_t* whereDynamicArray(DynamicArray_t* da, VoidFunctionWhere func) {
-    DynamicArray_t* new_da = new_DynamicArray(da -> funcs, 0, da -> data -> elementSize);
+DynamicArray_t* whereDynamicArrayEr(DynamicArray_t* da, VoidFunctionWhere func, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
+    DynamicArray_t* new_da = new_DynamicArrayEr(da -> funcs, 0, da -> data -> elementSize, error);
 
     for (int i = 0; i < da -> data -> count; ++i) {
-        if (func(getElementVoid(da, i))) {
-            pushBackVoid(new_da, getElementVoid(da, i));
+        if (func(getElementVoidEr(da, i, error))) {
+            pushBackVoidEr(new_da, getElementVoidEr(da, i, error), error);
         }
     }
 
@@ -345,12 +272,17 @@ DynamicArray_t* whereDynamicArray(DynamicArray_t* da, VoidFunctionWhere func) {
 }
 
 
-void* reduceDynamicArray(DynamicArray_t* da, VoidFunctionReduce func) {
+void* reduceDynamicArrayEr(DynamicArray_t* da, VoidFunctionReduce func, DA_ErrorCode* error) {
+    if (error) *error = EH_OK;
+    RETURN_IF_ERROR(!da, EH_ERROR_NULL_POINTER, NULL);
+
     void* ret = malloc(da -> data -> elementSize);
-    memcpy(ret, getElementVoid(da, 0), da -> data -> elementSize);
+    RETURN_IF_ERROR(!ret, EH_ERROR_MEMORY_ALLOCATION, NULL);
+
+    memcpy(ret, getElementVoidEr(da, 0, error), da -> data -> elementSize);
 
     for (int i = 1; i < da -> data -> count; ++i) {
-        ret = func(getElementVoid(da, i), ret);
+        ret = func(getElementVoidEr(da, i, error), ret);
     }
 
     return ret;

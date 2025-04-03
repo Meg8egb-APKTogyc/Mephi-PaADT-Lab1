@@ -3,7 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include "Vtables.h"
+#include "ErrorHandler.h"
 
+
+typedef ErrorCode DA_ErrorCode;
 
 struct DynamicArray;
 
@@ -17,21 +21,9 @@ typedef struct DynamicArray_data
 } DynamicArray_data_t;
 
 
-typedef void (*dataAlloc_t) (struct DynamicArray_data*, int, int);
-typedef char* (*toString_t) (struct DynamicArray*);
-typedef bool (*compare_t) (struct DynamicArray*, int, struct DynamicArray*, int);
-
-typedef struct DynamicArray_vtable 
-{
-    dataAlloc_t dataAlloc;
-    toString_t toString;
-    compare_t compare;
-} DynamicArray_vtable_t;
-
-
 typedef struct DynamicArray {
     DynamicArray_data_t* data;
-    DynamicArray_vtable_t* funcs;
+    Types_vtable_t* funcs;
 } DynamicArray_t;
 
 
@@ -41,50 +33,37 @@ typedef bool (*VoidFunctionWhere)(void *);
 typedef void* (*VoidFunctionReduce)(void *, void *);
 
 
-DynamicArray_t* new_DynamicArray(DynamicArray_vtable_t* funcs, int size, int elemSize);
+DynamicArray_t* new_DynamicArrayEr(Types_vtable_t* funcs, int size, int elemSize, DA_ErrorCode* error);
 
-#define newDynamicArray(X, Y) new_DynamicArray(X, Y, 0)
+#define newDynamicArray(X, Y) new_DynamicArrayEr(X, Y, 0, NULL)
 
+ErrorCode* freeDynamicArrayEr(DynamicArray_t* da, DA_ErrorCode* error);
 
-void DynamicArray_data_alloc(DynamicArray_t* da, int sz, int elemSize);
-void DynamicArray_data_alloc_int(DynamicArray_data_t* da_data, int sz, int elemSize);
-void DynamicArray_data_alloc_float(DynamicArray_data_t* da_data, int sz, int elemSize);
-void DynamicArray_data_alloc_string(DynamicArray_data_t* da_data, int sz, int elemSize);
+ErrorCode* resizeEr(DynamicArray_t* da, int sz, DA_ErrorCode* error);
 
-void freeDynamicArray(DynamicArray_t* da);
+char* DAtoStringEr(DynamicArray_t* da, DA_ErrorCode* error);
 
-void resize(DynamicArray_t* da, int sz);
+int _getCapacity(int sz);
 
-char* toString(DynamicArray_t* da);
-char* toStringInt(DynamicArray_t* da);
-char* toStringFloat(DynamicArray_t* da);
-char* toStringString(DynamicArray_t* da);
+void* getElementVoidEr(DynamicArray_t* da, int idx, DA_ErrorCode* error);
 
+ErrorCode* setVoidElementEr(DynamicArray_t* da, void* val, int idx, DA_ErrorCode* error);
 
-DynamicArray_vtable_t* get_int_DynamicArray_vtable();
-DynamicArray_vtable_t* get_float_DynamicArray_vtable();
-DynamicArray_vtable_t* get_string_DynamicArray_vtable();
+ErrorCode* pushBackVoidEr(DynamicArray_t* da, void* val, DA_ErrorCode* error);
+
+ErrorCode* popBackEr(DynamicArray_t* da, DA_ErrorCode* error);
+
+int getLenghtEr(DynamicArray_t* da, DA_ErrorCode* error);
 
 
-void* getElementVoid(DynamicArray_t* da, int idx);
+DynamicArray_t* concatenateDynamicArraysEr(DynamicArray_t* da1, DynamicArray_t* da2, DA_ErrorCode* error);
 
-void setVoidElement(DynamicArray_t* da, void* val, int idx);
+DynamicArray_t* mergeEr(DynamicArray_t* da1, DynamicArray_t* da2, VoidFunctionSort func, DA_ErrorCode* error);
 
-void pushBackVoid(DynamicArray_t* da, void* val);
+DynamicArray_t* mergeSortEr(DynamicArray_t* da, VoidFunctionSort func, DA_ErrorCode* error);
 
-void popBack(DynamicArray_t* da);
+DynamicArray_t* mapDynamicArrayEr(DynamicArray_t* da, VoidFunctionMap func, DA_ErrorCode* error);
 
-int getLenght(DynamicArray_t* da);
+DynamicArray_t* whereDynamicArrayEr(DynamicArray_t* da, VoidFunctionWhere func, DA_ErrorCode* error);
 
-
-DynamicArray_t* concatenateDynamicArrays(DynamicArray_t* da1, DynamicArray_t* da2);
-
-DynamicArray_t* merge(DynamicArray_t* da1, DynamicArray_t* da2, VoidFunctionSort func);
-
-DynamicArray_t* mergeSort(DynamicArray_t* da, VoidFunctionSort func);
-
-DynamicArray_t* mapDynamicArray(DynamicArray_t* da, VoidFunctionMap func);
-
-DynamicArray_t* whereDynamicArray(DynamicArray_t* da, VoidFunctionWhere func);
-
-void* reduceDynamicArray(DynamicArray_t* da, VoidFunctionReduce func);
+void* reduceDynamicArrayEr(DynamicArray_t* da, VoidFunctionReduce func, DA_ErrorCode* error);

@@ -1,10 +1,11 @@
+0
 2 2
-10 10
+10
 10
 set
-1 WOrld
+1 hello
 set
-0 Hi
+0 world
 res
 4
 get
@@ -12,10 +13,10 @@ get
 sort
 map
 set
-3 Nice
+100 champion
 where
 reduce
 sort
 1
 set
-0 Hi
+0 ship
