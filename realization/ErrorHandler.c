@@ -1,4 +1,4 @@
-#include "ErrorHandler.h"
+#include "../headers/ErrorHandler.h"
 #include <string.h>
 
 const char* error_str(ErrorCode error) {

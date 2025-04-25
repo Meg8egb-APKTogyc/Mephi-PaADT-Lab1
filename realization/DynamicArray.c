@@ -1,4 +1,4 @@
-#include "DynamicArray.h"
+#include "../headers/DynamicArray.h"
 
 
 int _getCapacity(int size) {
