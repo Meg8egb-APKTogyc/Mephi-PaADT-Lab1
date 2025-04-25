@@ -1,0 +1,22 @@
+0
+2 2
+10
+10
+set
+1 hello
+set
+0 world
+res
+4
+get
+1
+sort
+map
+set
+1000 champion
+where
+reduce
+sort
+1
+set
+0 ship
