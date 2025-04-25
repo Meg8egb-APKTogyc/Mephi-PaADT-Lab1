@@ -13,7 +13,7 @@ get
 sort
 map
 set
-100 champion
+1000 champion
 where
 reduce
 sort

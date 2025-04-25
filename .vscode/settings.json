@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "dynamicarray.h": "c",
-        "array": "c",
-        "string_view": "c",
-        "initializer_list": "c",
-        "string": "c"
-    }
-}
